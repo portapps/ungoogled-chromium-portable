@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ungoogled-chromium" basedir=".">
+
+  <dirname property="app.basedir" file="${ant.file.ungoogled-chromium}"/>
+  <property name="build.properties" value="${app.basedir}/build.properties"/>
+  <property file="${build.properties}"/>
+
+  <!-- Load Portapps core build -->
+  <property name="core.basedir" location="${app.basedir}\${core.dir}"/>
+  <fail unless="core.basedir" message="Core directory '${core.basedir}' not found in ${core.basedir}"/>
+  <echo message="Core found in ${core.basedir}" level="debug"/>
+
+  <!-- Import build-app.xml  -->
+  <import file="${core.basedir}\.build\build-app.xml"/>
+
+  <!-- Targets -->
+  <target name="release" depends="release.app" description="Release"/>
+
+  <target name="prepare">
+    <echo message="Preparing release..."/>
+    <if>
+      <equals arg1="${atf.arch}" arg2="win32"/>
+      <then>
+        <move todir="${extract.path}">
+          <fileset dir="${extract.path}\Ungoogled-Chromium-${app.version}-Win32" defaultexcludes="no"/>
+        </move>
+      </then>
+      <else>
+        <move todir="${extract.path}">
+          <fileset dir="${extract.path}\ungoogled-chromium-${app.version}-1_windows" defaultexcludes="no"/>
+        </move>
+      </else>
+    </if>
+  </target>
+
+</project>
