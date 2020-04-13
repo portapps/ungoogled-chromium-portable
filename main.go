@@ -6,8 +6,9 @@ import (
 	"os"
 	"path"
 
-	. "github.com/portapps/portapps"
-	"github.com/portapps/portapps/pkg/utl"
+	"github.com/portapps/portapps/v2"
+	"github.com/portapps/portapps/v2/pkg/log"
+	"github.com/portapps/portapps/v2/pkg/utl"
 )
 
 type config struct {
@@ -15,7 +16,7 @@ type config struct {
 }
 
 var (
-	app *App
+	app *portapps.App
 	cfg *config
 )
 
@@ -28,8 +29,8 @@ func init() {
 	}
 
 	// Init app
-	if app, err = NewWithCfg("ungoogled-chromium-portable", "Ungoogled Chromium", cfg); err != nil {
-		Log.Fatal().Err(err).Msg("Cannot initialize application. See log file for more info.")
+	if app, err = portapps.NewWithCfg("ungoogled-chromium-portable", "Ungoogled Chromium", cfg); err != nil {
+		log.Fatal().Err(err).Msg("Cannot initialize application. See log file for more info.")
 	}
 }
 
