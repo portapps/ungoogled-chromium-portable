@@ -29,6 +29,10 @@ All kinds of contributions are welcome :raised_hands:! The most basic way to sho
 
 Thanks again for your support, it is much appreciated! :pray:
 
+## Credits
+
+Thanks to [**@macchrome**](https://github.com/macchrome) for providing the [Ungoogled Chromium releases for Windows](https://github.com/macchrome/winchrome/releases).
+
 ## License
 
 MIT. See `LICENSE` for more details.<br />
