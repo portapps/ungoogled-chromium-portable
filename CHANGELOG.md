@@ -1,5 +1,10 @@
 # Changelog
 
+## 85.0.4183.83-6 (2020/09/04)
+
+* Ungoogled Chromium 85.0.4183.83
+* Portapps 2.6.0
+
 ## 84.0.4147.89-5 (2020/06/07)
 
 * Ungoogled Chromium 84.0.4147.89
