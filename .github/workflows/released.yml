@@ -23,7 +23,7 @@ jobs:
           update_release_body: false
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${{ github.event.repository.name }}-(win32|win64).exe
+            ${{ github.event.repository.name }}-win64.exe
       -
         name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@v2
@@ -32,4 +32,4 @@ jobs:
           update_release_body: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${{ github.event.repository.name }}-(win32|win64).exe
+            ${{ github.event.repository.name }}-win64.exe

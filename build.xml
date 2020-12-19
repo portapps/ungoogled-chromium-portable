@@ -19,17 +19,12 @@
   <target name="prepare">
     <echo message="Preparing release..."/>
     <if>
-      <equals arg1="${atf.arch}" arg2="win32"/>
+      <equals arg1="${atf.arch}" arg2="win64"/>
       <then>
         <move todir="${extract.path}">
-          <fileset dir="${extract.path}\Ungoogled-Chromium-${app.version}-1_Win32" defaultexcludes="no"/>
+          <fileset dir="${extract.path}\Ungoogled-Chromium-${app.version}-1_Win64" defaultexcludes="no"/>
         </move>
       </then>
-      <else>
-        <move todir="${extract.path}">
-          <fileset dir="${extract.path}\ungoogled-chromium-${app.version}-1_Win64" defaultexcludes="no"/>
-        </move>
-      </else>
     </if>
   </target>
 
