@@ -1,5 +1,10 @@
 # Changelog
 
+## 89.0.4389.90-9 (2021/03/16)
+
+* Ungoogled Chromium 89.0.4389.90
+* Portapps 3.3.0
+
 ## 87.0.4280.88-8 (2021/01/06)
 
 * Ungoogled Chromium 87.0.4280.88
