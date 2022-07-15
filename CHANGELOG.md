@@ -1,5 +1,10 @@
 # Changelog
 
+## 103.0.5060.114-15 (2022/07/15)
+
+* Ungoogled Chromium 103.0.5060.114
+* Portapps 3.6.0
+
 ## 100.0.4896.62-14 (2022/04/03)
 
 * Ungoogled Chromium 100.0.4896.62
