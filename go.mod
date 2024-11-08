@@ -2,7 +2,7 @@ module github.com/portapps/ungoogled-chromium-portable
 
 go 1.23
 
-require github.com/portapps/portapps/v3 v3.13.0
+require github.com/portapps/portapps/v3 v3.14.0
 
 require (
 	github.com/akavel/rsrc v0.10.2 // indirect
