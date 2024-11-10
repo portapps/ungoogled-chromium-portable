@@ -1,5 +1,10 @@
 # Changelog
 
+## 130.0.6723.122-19 (2024/11/10)
+
+* Ungoogled Chromium 130.0.6723.122
+* Portapps 3.14.1
+
 ## 127.0.6533.89-18 (2024/08/03)
 
 * Ungoogled Chromium 127.0.6533.89
