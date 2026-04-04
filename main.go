@@ -1,10 +1,10 @@
 //go:generate go install -v github.com/josephspurrier/goversioninfo/cmd/goversioninfo
-//go:generate goversioninfo -icon=res/papp.ico -manifest=res/papp.manifest
 package main
 
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/portapps/portapps/v3"
 	"github.com/portapps/portapps/v3/pkg/log"
@@ -36,7 +36,7 @@ func init() {
 
 func main() {
 	utl.CreateFolder(app.DataPath)
-	app.Process = utl.PathJoin(app.AppPath, "chrome.exe")
+	app.Process = filepath.Join(app.AppPath, "chrome.exe")
 	app.Args = []string{
 		"--user-data-dir=" + app.DataPath,
 		"--no-default-browser-check",
