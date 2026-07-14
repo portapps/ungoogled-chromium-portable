@@ -1,0 +1,218 @@
+name: update-app
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *'
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    environment: update-app # secrets are gated by this environment
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      -
+        name: GitHub auth token from GitHub App
+        id: write-app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PORTAPPS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.PORTAPPS_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      -
+        name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{ steps.write-app.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
+      -
+        name: Update Ungoogled Chromium
+        id: update
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const upstream = {
+              owner: 'macchrome',
+              repo: 'winchrome'
+            };
+            const sourceUrl = `https://github.com/${upstream.owner}/${upstream.repo}/releases`;
+            const archivePattern = /^ungoogled-chromium-(\d+\.\d+\.\d+\.\d+)-(\d+)_Win64\.7z$/;
+
+            function workspacePath(relativePath) {
+              return path.join(process.env.GITHUB_WORKSPACE, relativePath);
+            }
+
+            function readFile(relativePath) {
+              return fs.readFileSync(workspacePath(relativePath), 'utf8');
+            }
+
+            function writeFile(relativePath, content) {
+              fs.writeFileSync(workspacePath(relativePath), content, 'utf8');
+            }
+
+            function propertyValue(content, name) {
+              const pattern = new RegExp(`^${name.replaceAll('.', '\\.')}\\s*=\\s*(.+)$`, 'm');
+              const match = content.match(pattern);
+              if (!match) {
+                throw new Error(`Missing ${name} in build.properties`);
+              }
+              return match[1].trim();
+            }
+
+            function replaceProperty(content, name, value) {
+              const pattern = new RegExp(`^(${name.replaceAll('.', '\\.')}\\s*=\\s*).+$`, 'm');
+              if (!pattern.test(content)) {
+                throw new Error(`Missing ${name} in build.properties`);
+              }
+              return content.replace(pattern, `$1${value}`);
+            }
+
+            function compareVersions(left, right) {
+              const leftParts = left.split('.').map(Number);
+              const rightParts = right.split('.').map(Number);
+              for (let i = 0; i < Math.max(leftParts.length, rightParts.length); i++) {
+                const diff = (leftParts[i] || 0) - (rightParts[i] || 0);
+                if (diff !== 0) {
+                  return diff;
+                }
+              }
+              return 0;
+            }
+
+            function compareCandidates(left, right) {
+              const versionDiff = compareVersions(left.version, right.version);
+              if (versionDiff !== 0) {
+                return versionDiff;
+              }
+              const packageDiff = left.packageRelease - right.packageRelease;
+              if (packageDiff !== 0) {
+                return packageDiff;
+              }
+              return new Date(left.publishedAt) - new Date(right.publishedAt);
+            }
+
+            function candidateFromArchive(release, archiveName, downloadUrl) {
+              const match = archivePattern.exec(archiveName);
+              if (!match) {
+                return null;
+              }
+              return {
+                version: match[1],
+                packageRelease: Number(match[2]),
+                archiveName,
+                downloadUrl,
+                tagName: release.tag_name,
+                htmlUrl: release.html_url,
+                publishedAt: release.published_at
+              };
+            }
+
+            function candidatesFromRelease(release) {
+              if (release.draft || release.prerelease) {
+                return [];
+              }
+
+              const candidates = [];
+              for (const asset of release.assets || []) {
+                const candidate = candidateFromArchive(release, asset.name, asset.browser_download_url);
+                if (candidate) {
+                  candidates.push(candidate);
+                }
+              }
+
+              const body = release.body || '';
+              const bodyPattern = /https:\/\/github\.com\/macchrome\/winchrome\/releases\/download\/[^/\s]+\/(ungoogled-chromium-\d+\.\d+\.\d+\.\d+-\d+_Win64\.7z)/g;
+              for (const match of body.matchAll(bodyPattern)) {
+                const candidate = candidateFromArchive(release, match[1], match[0]);
+                if (candidate) {
+                  candidates.push(candidate);
+                }
+              }
+
+              return candidates;
+            }
+
+            async function latestStableArchive() {
+              const releases = await github.paginate(github.rest.repos.listReleases, {
+                owner: upstream.owner,
+                repo: upstream.repo,
+                per_page: 100
+              });
+              const candidates = releases.flatMap(candidatesFromRelease);
+              if (candidates.length === 0) {
+                throw new Error(`No stable Win64 Ungoogled Chromium archives found in ${sourceUrl}`);
+              }
+              candidates.sort(compareCandidates);
+              return candidates.at(-1);
+            }
+
+            const latest = await latestStableArchive();
+            core.info(`Resolved latest stable Ungoogled Chromium archive: ${JSON.stringify(latest)}`);
+
+            const relativePath = 'build.properties';
+            const currentContent = readFile(relativePath);
+            const currentVersion = propertyValue(currentContent, 'app.version');
+            const currentRelease = Number(propertyValue(currentContent, 'app.release'));
+            if (!Number.isInteger(currentRelease)) {
+              throw new Error(`Invalid app.release in ${relativePath}: ${currentRelease}`);
+            }
+
+            const tagTemplate = latest.tagName.replace(`M${latest.version}`, 'M${app.version}');
+            const archiveTemplate = `ungoogled-chromium-\${app.version}-${latest.packageRelease}_Win64.7z`;
+            const archiveFolderTemplate = `ungoogled-chromium-\${app.version}-${latest.packageRelease}_Win64`;
+            const artifactUrl = `https://github.com/${upstream.owner}/${upstream.repo}/releases/download/${tagTemplate}/${archiveTemplate}`;
+
+            let updatedContent = currentContent;
+            updatedContent = replaceProperty(updatedContent, 'app.version', latest.version);
+            updatedContent = replaceProperty(updatedContent, 'atf.win64.url', artifactUrl);
+            updatedContent = replaceProperty(updatedContent, 'atf.win64.assertextract', `${archiveFolderTemplate}/chrome.exe`);
+
+            const appChanged = updatedContent !== currentContent;
+            const nextRelease = appChanged ? currentRelease + 1 : currentRelease;
+            updatedContent = replaceProperty(updatedContent, 'app.release', String(nextRelease));
+
+            if (updatedContent !== currentContent) {
+              writeFile(relativePath, updatedContent);
+              core.info(`Updated ${relativePath}`);
+            } else {
+              core.info(`${relativePath} is already up to date`);
+            }
+
+            core.setOutput('title', `Ungoogled Chromium ${latest.version}`);
+            core.setOutput('version', latest.version);
+            core.setOutput('previous-version', currentVersion);
+            core.setOutput('release', String(nextRelease));
+      -
+        name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          base: ${{ github.event.repository.default_branch }}
+          branch: update/ungoogled-chromium
+          token: ${{ steps.write-app.outputs.token }}
+          commit-message: ${{ steps.update.outputs.title }}
+          title: ${{ steps.update.outputs.title }}
+          signoff: true
+          sign-commits: true
+          delete-branch: true
+          body: |
+            This updates Ungoogled Chromium to ${{ steps.update.outputs.version }}.
