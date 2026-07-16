@@ -17,7 +17,7 @@ on:
 
 jobs:
   update:
-    runs-on: ubuntu-24.04
+    runs-on: windows-latest
     environment: update-app # secrets are gated by this environment
     timeout-minutes: 10
     permissions:
@@ -184,11 +184,11 @@ jobs:
 
             let updatedContent = currentContent;
             updatedContent = replaceProperty(updatedContent, 'app.version', latest.version);
+            const versionChanged = updatedContent !== currentContent;
             updatedContent = replaceProperty(updatedContent, 'atf.win64.url', artifactUrl);
             updatedContent = replaceProperty(updatedContent, 'atf.win64.assertextract', `${archiveFolderTemplate}/chrome.exe`);
 
-            const appChanged = updatedContent !== currentContent;
-            const nextRelease = appChanged ? currentRelease + 1 : currentRelease;
+            const nextRelease = versionChanged ? currentRelease + 1 : currentRelease;
             updatedContent = replaceProperty(updatedContent, 'app.release', String(nextRelease));
 
             if (updatedContent !== currentContent) {
