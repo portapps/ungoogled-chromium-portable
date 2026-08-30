@@ -3,12 +3,11 @@ package main
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/portapps/portapps/v3"
+	"github.com/portapps/portapps/v3/pkg/files"
 	"github.com/portapps/portapps/v3/pkg/log"
-	"github.com/portapps/portapps/v3/pkg/utl"
 )
 
 type config struct {
@@ -35,7 +34,9 @@ func init() {
 }
 
 func main() {
-	utl.CreateFolder(app.DataPath)
+	if err := os.MkdirAll(app.DataPath, os.ModePerm); err != nil {
+		log.Fatal().Err(err).Msg("Cannot create data directory.")
+	}
 	app.Process = filepath.Join(app.AppPath, "chrome.exe")
 	app.Args = []string{
 		"--user-data-dir=" + app.DataPath,
@@ -49,9 +50,7 @@ func main() {
 	// Cleanup on exit
 	if cfg.Cleanup {
 		defer func() {
-			utl.Cleanup([]string{
-				path.Join(os.Getenv("LOCALAPPDATA"), "Chromium"),
-			})
+			files.Cleanup(filepath.Join(os.Getenv("LOCALAPPDATA"), "Chromium"))
 		}()
 	}
 
