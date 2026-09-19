@@ -14,9 +14,14 @@ on:
   push:
     branches:
       - 'master'
+  pull_request:
+    paths:
+      - '.github/workflows/update-app.yml'
+      - 'build.properties'
 
 jobs:
   update:
+    if: github.event_name != 'pull_request'
     runs-on: windows-latest
     environment: update-app # secrets are gated by this environment
     timeout-minutes: 10
@@ -47,7 +52,7 @@ jobs:
         id: update
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          script: |
+          script: &update-script |
             const fs = require('fs');
             const path = require('path');
 
@@ -216,3 +221,33 @@ jobs:
           delete-branch: true
           body: |
             This updates Ungoogled Chromium to ${{ steps.update.outputs.version }}.
+
+  diff:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # same as global permissions
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      -
+        name: Update Ungoogled Chromium
+        id: update
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: *update-script
+      -
+        name: Show diff
+        shell: pwsh
+        run: |
+          $diff = git --no-pager diff -- build.properties
+          if ($diff) {
+            $diff
+          } else {
+            Write-Host "No update diff."
+          }
